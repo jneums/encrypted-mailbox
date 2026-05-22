@@ -27,7 +27,7 @@ submission:
     - Inbox management — pagination, unread filtering, counts, deletion
   tags: [messaging, encryption, vetkeys, ibe, privacy, dead-drop, secure-messaging]
   visuals:
-    icon_url: https://github.com/jneums/encrypted-mailbox/releases/download/v0.1.0-assets/icon-encrypted-mailbox.webp
-    banner_url: https://github.com/jneums/encrypted-mailbox/releases/download/v0.1.0-assets/banner-encrypted-mailbox.webp
+    icon_url: https://github.com/jneums/encrypted-mailbox/releases/download/v0.1.1-assets/icon-encrypted-mailbox.webp
+    banner_url: https://github.com/jneums/encrypted-mailbox/releases/download/v0.1.1-assets/banner-encrypted-mailbox.webp
     gallery_images:
-      - https://github.com/jneums/encrypted-mailbox/releases/download/v0.1.0-assets/banner-encrypted-mailbox.webp
+      - https://github.com/jneums/encrypted-mailbox/releases/download/v0.1.1-assets/banner-encrypted-mailbox.webp
