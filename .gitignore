@@ -1,0 +1,6 @@
+.dfx/
+.mops/
+node_modules/
+.icp/
+assets/icon-raw.png
+assets/banner-raw.png

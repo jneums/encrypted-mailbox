@@ -1,0 +1,13 @@
+{
+  "canisters": {
+    "encrypted-mailbox": {
+      "main": "src/main.mo",
+      "type": "motoko"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": "mops sources"
+    }
+  }
+}

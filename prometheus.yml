@@ -1,0 +1,32 @@
+name: encrypted-mailbox
+namespace: io.github.jneums.encrypted-mailbox
+title: Encrypted Mailbox
+version: 0.1.0
+description: A dead-drop encrypted messaging service on the Internet Computer. Send encrypted messages to any principal — no key exchange, no registration, no setup. Uses vetKey identity-based encryption so only the intended recipient can ever read the message.
+category: Communication
+mcp_path: /mcp
+repo_url: https://github.com/jneums/encrypted-mailbox
+payment: null
+tags: [messaging, encryption, vetkeys, ibe, privacy, dead-drop, secure-messaging]
+submission:
+  name: Encrypted Mailbox
+  description: A dead-drop encrypted messaging service on the Internet Computer. Send encrypted messages to any principal — no key exchange, no registration, no setup. Uses vetKey identity-based encryption so only the intended recipient can ever read the message.
+  publisher: Jesse
+  category: Communication
+  deployment_type: global
+  repo_url: https://github.com/jneums/encrypted-mailbox
+  mcp_path: /mcp
+  why_this_app: There is no standard way for agents or users on ICP to privately communicate. The Encrypted Mailbox solves this with IBE via vetKeys — encrypt to a principal, drop the message, and only the recipient can ever decrypt it. No key exchange, no registration, no shared channels. The canister only ever stores ciphertext.
+  key_features:
+    - Zero-setup encryption — encrypt to any principal, no recipient registration required
+    - IBE via vetKeys — threshold-derived keys, no single node can decrypt
+    - Dead drop model — sender drops, recipient picks up whenever
+    - Fully on-chain — no external infra, no databases, no relay servers
+    - Symmetric replies — recipient can reply through the same system
+    - Per-message metadata — sender, subject, timestamp visible in inbox without decryption
+    - Inbox management — pagination, unread filtering, counts, deletion
+  tags: [messaging, encryption, vetkeys, ibe, privacy, dead-drop, secure-messaging]
+  visuals:
+    icon_url: ""
+    banner_url: ""
+    gallery_images: []
