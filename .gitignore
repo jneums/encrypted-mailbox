@@ -1,6 +1,6 @@
 .dfx/
 .mops/
 node_modules/
-.icp/
+.icp/cache/
 assets/icon-raw.png
 assets/banner-raw.png
