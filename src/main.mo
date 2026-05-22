@@ -10,14 +10,12 @@ import HttpTypes "mo:http-types";
 import Map "mo:map/Map";
 
 import AuthCleanup "mo:mcp-motoko-sdk/auth/Cleanup";
-import AuthState "mo:mcp-motoko-sdk/auth/State";
 import AuthTypes "mo:mcp-motoko-sdk/auth/Types";
 
 import Mcp "mo:mcp-motoko-sdk/mcp/Mcp";
 import McpTypes "mo:mcp-motoko-sdk/mcp/Types";
 import HttpHandler "mo:mcp-motoko-sdk/mcp/HttpHandler";
 import Cleanup "mo:mcp-motoko-sdk/mcp/Cleanup";
-import State "mo:mcp-motoko-sdk/mcp/State";
 import Payments "mo:mcp-motoko-sdk/mcp/Payments";
 import HttpAssets "mo:mcp-motoko-sdk/mcp/HttpAssets";
 import Beacon "mo:mcp-motoko-sdk/mcp/Beacon";
@@ -43,28 +41,43 @@ shared ({ caller = deployer }) persistent actor class McpServer(
   // The canister owner
   var owner : Principal = Option.get(do ? { args!.owner! }, deployer);
 
-  // State for certified HTTP assets
+  // =================================================================================
+  // --- STABLE STATE ---
+  // All data that must survive upgrades lives here as top-level `var` declarations.
+  // The `persistent actor` keyword ensures these are preserved across upgrades.
+  // =================================================================================
+
+  // HTTP asset cache (stable entries, reconstructed into live cache on init)
   var stable_http_assets : HttpAssets.StableEntries = [];
-  transient let http_assets = HttpAssets.init(stable_http_assets);
+
+  // Mailbox storage — per-principal inbox
+  var inbox : ToolContext.InboxStore = Map.new<Principal, [ToolContext.Message]>();
+  var messageCounter : { var count : Nat } = { var count = 0 };
+
+  // Encryption at rest via vetKD — enabled by default on mainnet
+  var encryptionEnabled : Bool = true;
 
   // Resource contents
   var resourceContents = [
     ("file:///README.md", "# Encrypted Mailbox MCP Server\nA dead-drop encrypted messaging service using vetKey IBE on the Internet Computer."),
   ];
 
-  var appContext : McpTypes.AppContext = State.init(resourceContents);
+  // =================================================================================
+  // --- TRANSIENT STATE ---
+  // Reconstructed from stable state on every init/upgrade.
+  // Timers, function references, and derived objects live here.
+  // =================================================================================
 
-  // =================================================================================
-  // --- MAILBOX STORAGE ---
-  // Per-principal inbox using orthogonal persistence
-  // =================================================================================
-  var inbox : ToolContext.InboxStore = Map.new<Principal, [ToolContext.Message]>();
-  var messageCounter : { var count : Nat } = { var count = 0 };
+  transient let http_assets = HttpAssets.init(stable_http_assets);
 
-  // =================================================================================
-  // --- AUTHENTICATION (ENABLED) ---
-  // All tools require authentication
-  // =================================================================================
+  var appContext : McpTypes.AppContext = {
+    activeStreams = Map.new<Text, Time.Time>();
+    messageQueues = Map.new<Text, [Text]>();
+    var cleanupTimerId = null;
+    resourceContents = Map.fromIter<Text, Text>(resourceContents.vals(), Map.thash);
+  };
+
+  // --- AUTHENTICATION ---
 
   let issuerUrl = "https://bfggx-7yaaa-aaaai-q32gq-cai.icp0.io";
   let allowanceUrl = "https://prometheusprotocol.org/connections";
@@ -79,25 +92,33 @@ shared ({ caller = deployer }) persistent actor class McpServer(
     };
   };
 
-  transient let authContext : ?AuthTypes.AuthContext = ?AuthState.init(
-    Principal.fromActor(self),
-    owner,
-    issuerUrl,
-    requiredScopes,
-    transformJwksResponse,
-  );
+  // AuthContext — apiKeys map inside survives upgrades via orthogonal persistence.
+  // oidc caches and timers are re-initialized on upgrade, but the apiKey store persists.
+  let authContext : ?AuthTypes.AuthContext = ?{
+    oidc = ?{
+      issuerUrl = issuerUrl;
+      requiredScopes = requiredScopes;
+      jwksCache = Map.new<Text, Map.Map<Text, AuthTypes.PublicKeyData>>();
+      sessionCache = Map.new<Text, AuthTypes.CachedSession>();
+      transformJwksResponse = transformJwksResponse;
+      self = Principal.fromActor(self);
+    };
+    apiKey = ?{
+      owner = owner;
+      apiKeys = Map.new<AuthTypes.HashedApiKey, AuthTypes.ApiKeyInfo>();
+    };
+    var cleanupTimerId = null;
+  };
 
-  // =================================================================================
-  // --- BEACON (ENABLED) ---
-  // =================================================================================
+  // --- BEACON ---
 
   let beaconCanisterId = Principal.fromText("m63pw-fqaaa-aaaai-q33pa-cai");
-  transient let beaconContext : ?Beacon.BeaconContext = ?Beacon.init(
+  let beaconContext : ?Beacon.BeaconContext = ?Beacon.init(
     beaconCanisterId,
     ?(15 * 60),
   );
 
-  // --- Timers ---
+  // --- Timers (re-started on every init/upgrade) ---
   Cleanup.startCleanupTimer<system>(appContext);
 
   switch (authContext) {
@@ -126,9 +147,6 @@ shared ({ caller = deployer }) persistent actor class McpServer(
     curve : { #bls12_381_g2 };
     name : Text;
   } = { curve = #bls12_381_g2; name = "key_1" };
-
-  // Encryption at rest via vetKD — enabled by default on mainnet
-  var encryptionEnabled : Bool = true;
 
   // --- TOOL CONTEXT ---
   transient let toolContext : ToolContext.ToolContext = {
